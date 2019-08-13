@@ -162,18 +162,40 @@ void atualizarPaginaWEB(WiFiClient client, String uid) {
     client.println("<!DOCTYPE html><html lang=\"pt-br\">");
     client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
     client.println("<meta charset=\"utf-8\">");
+    
     // CSS para estilizar a página
     client.println("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
     client.println(".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;");
-    client.println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
+    client.println("text-decoration: none; font-size: 16pt; margin: 2px; cursor: pointer; border-radius: 6px;}");
     client.println(".uid { display: flex; justify-content: center;}");
-    client.println(".uid p { padding: 5px; border: 2px solid black; max-width: 175px;} </style></head>");
+    client.println(".uid p { padding: 8px; border: 2px solid black; max-width: 175px;} </style></head>");
     
     // Página WEB
-    client.println("<body><h1>ESP32 + RFID</h1>");
-    client.println("<p><a href=\"/ler\"><button class=\"button\">Ler Cartão</button></a></p>");
+    client.println("<p><a href=\"/ler\"><button class=\"button\"><b>Ler Cartão</b></button></a></p>");
     client.println("<br><div class=\"uid\"><p>" + uid + "</p></div>");
     client.println("</body></html>");
+
+    // Script de comunicação com o site Bikeifs.com
+    client.println("<script type=\"text/javascript\">");
+    client.println("const dominios = [\"http://bikeifs.com\"]"); // Lista de domínios liberados
+   
+    // Escuta por eventos de postMessage
+    client.println("window.addEventListener(\"message\", function(e) {"); /* FUNÇÃO EVENT LISTENER */
+    
+    client.println("if (!dominios.includes(e.origin)) return;"); // Se o site conectado não estiver liberado, retorna.
+    
+    client.println("const {acao, chave} = e.data"); // recupera a ação e a chave requisitada dos dados do evento
+    
+    // se a requisicão HTTP for do tipo GET e o valor requisitado é o UID do cartão
+    client.println("if (acao == \'get\' && chave == \'uid\') {"); /* IF */ 
+    client.println("var valor = \"" + uid + "\""); // salva o UID lido na variável que será enviada como resposta 
+    client.println("e.source.postMessage({"); /* POST MESSAGE */
+    client.println("acao: \'returnData\', chave, valor"); // Dados enviados em formato JSON 
+    client.println("}, \'*\')"); /* FIM POST MESSAGE */
+    client.println("}"); /* FIM IF */
+    client.println("});"); /* FIM FUNÇÃO EVENT LISTENER */
+  
+    client.println("</script>");
     
     // The HTTP response ends with another blank line
     client.println();
