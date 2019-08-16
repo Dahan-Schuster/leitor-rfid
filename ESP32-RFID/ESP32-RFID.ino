@@ -5,8 +5,10 @@
 #include <WiFiClient.h> // biblioteca para envio de requests HTTP
 
 /* Configurações do Wi-FI */
-const char ssid[]     = "GVT-8534";
-const char password[] = "8603001076";
+const char ssidHOME[]     = "GVT-8534";
+const char passwordHOME[] = "8603001076";
+const char ssidIFSLAB[] = "IFSLAB";
+const char passwordIFSLAB[] = "LABifs!@#";
 
 // Site remoto - dados do site que vai receber a requisição GET
 const char http_site[] = "http://dahan-pc";
@@ -44,9 +46,20 @@ void setup() {
 
   digitalWrite(greenLed, LOW);
   digitalWrite(redLed, HIGH);
+
+  // Procura as redes disponíveis
+  int n = WiFi.scanNetworks();
+  for (int i = 0; i < n; ++i) {
+    if (WiFi.SSID(i) == ssidHOME ) {        // se uma das redes salvar estiver listada 
+      WiFi.begin(ssidHOME, passwordHOME);   // tenta conectar 
+      break;
+    }
+    if (WiFi.SSID(i) == ssidIFSLAB) {         
+      WiFi.begin(ssidIFSLAB, passwordIFSLAB); 
+      break;
+    }
+  }
   
-  // Tenta conexão com Wi-fi
-  WiFi.begin(ssid, password);
   while ( WiFi.status() != WL_CONNECTED ) {
     delay(100);
     Serial.print(".");
@@ -167,10 +180,13 @@ void atualizarPaginaWEB(WiFiClient client, String uid) {
     client.println("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
     client.println(".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;");
     client.println("text-decoration: none; font-size: 16pt; margin: 2px; cursor: pointer; border-radius: 6px;}");
+    client.println(".lead {text-size: 16pt;}");
     client.println(".uid { display: flex; justify-content: center;}");
     client.println(".uid p { padding: 8px; border: 2px solid black; max-width: 175px;} </style></head>");
     
     // Página WEB
+    client.println("<h4><b>Pronto para ler um cartão/etiqueta RFID.</b></h4>");
+    client.println("<p class=\"lead\">Clique no botão abaixo e aproxime o cartão do leitor.</p>");
     client.println("<p><a href=\"/ler\"><button class=\"button\"><b>Ler Cartão</b></button></a></p>");
     client.println("<br><div class=\"uid\"><p>" + uid + "</p></div>");
     client.println("</body></html>");
