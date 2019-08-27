@@ -137,8 +137,9 @@ void loop() {
 
 String lerCartao() {
 
-    String uid = "";
+    String codigo = "";
     bool theresACard = false;
+    
     // Aguarda a aproximação do(s) cartão(ões)       
     for (int i = 0; i < 50; i++) { // Percorre um loop de 50 voltas
       if (mfrc522.PICC_IsNewCardPresent()) {
@@ -152,6 +153,7 @@ String lerCartao() {
     
     // Se um houver um cartão...
     if (theresACard) { 
+      
       // ...seleciona um dos cartões (se houver mais de um)
       for (int i = 0; i < 25; i++) {  // loop de 25 voltas
         if (mfrc522.PICC_ReadCardSerial()) {
@@ -161,22 +163,28 @@ String lerCartao() {
         delay(200); 
         digitalWrite(greenLed, HIGH);
       } // 25 * 0.2 == 5 segundos de tentativa de ler um cartão dentre os detectados
+    
+    
+      // ...armazena o UID
+      for (byte i = 0; i < mfrc522.uid.size; i++)
+      {
+        codigo.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? "0" : ""));
+        codigo.concat(String(mfrc522.uid.uidByte[i], HEX));
+      }
+      
+      codigo.toUpperCase();
+  
+      Serial.println("Cartão lido: " + codigo);
     }
-
+    
     // Pausa a leitura
     mfrc522.PICC_HaltA();
-    
-    // Armazenando UID
-    for (byte i = 0; i < mfrc522.uid.size; i++)
-    {
-      uid.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? "0" : ""));
-      uid.concat(String(mfrc522.uid.uidByte[i], HEX));
-    }
-    uid.toUpperCase();
 
-    Serial.println("Cartão lido: " + uid);
+    // Liga o LED verde para indicar a pausa na leitrua
     digitalWrite(greenLed, HIGH);
-    return uid;
+
+    
+    return codigo;
 }
 
 void abrirPaginaLeitura(WiFiClient client) {
@@ -210,8 +218,12 @@ void abrirPaginaLeitura(WiFiClient client) {
 // Monta a página WEB para exibir o UID do cartão lido
 void atualizarPaginaWEB(WiFiClient client, String uid) {
 
+    String mensagemUID = "";
+    Serial.println(uid + " - " + mensagemUID);
     if (uid == "") {
-      uid = "Nenhum cartão lido";
+      mensagemUID = "Nenhum cartão lido";
+    } else {
+      mensagemUID = "Código detectado. Pronto para avançar.";
     }
 
     client.println("<!DOCTYPE html><html lang=\"pt-br\">");
@@ -235,8 +247,8 @@ void atualizarPaginaWEB(WiFiClient client, String uid) {
     client.println("<h2><b>Pronto para ler um cartão/etiqueta RFID.</b></h2>");
     client.println("<p class=\"lead\">Clique no botão abaixo e aproxime o cartão do leitor.</p>");
     client.println("<p><a href=\"/ler\"><button class=\"button\"><b>Ler Cartão</b></button></a></p>");
-    client.println("<p class=\"lead\">Códigos lidos aparecerão logo abaixo.</p>");
-    client.println("<br><div class=\"uid\"><p class=\"lead\">" + uid + "</p></div>");
+    client.println("<br>");
+    client.println("<br><div class=\"uid\"><p class=\"lead\">" + mensagemUID + "</p></div>");
     client.println("</div>");
     client.println("</body>");
     
@@ -259,11 +271,16 @@ void atualizarPaginaWEB(WiFiClient client, String uid) {
     client.println("}, \'*\')"); /* FIM POST MESSAGE */
     client.println("}"); /* FIM IF */
     client.println("});"); /* FIM FUNÇÃO EVENT LISTENER */
-  
+
+    
     client.println("</script>");
     
     // The HTTP response ends with another blank line
     client.println();
+
+
+    // Limpa a variável UID
+    uid = "";
     
     
 }
