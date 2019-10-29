@@ -5,13 +5,10 @@
 #include <WiFiClient.h> // biblioteca para envio de requests HTTP
 
 /* Configurações do Wi-FI */
-const char ssidHOME[]     = "GVT-8534";
-const char passwordHOME[] = "8603001076";
+const char ssidHOME[]     = "VIVO-EAE0";
+const char passwordHOME[] = "8403000199";
 const char ssidIFSLAB[] = "IFSLAB";
 const char passwordIFSLAB[] = "LABifs!@#";
-
-// Site remoto - dados do site que vai receber a requisição GET
-const char http_site[] = "http://dahan-pc";
 
 // Define a porta do servidor para 80
 WiFiServer server(80);
@@ -50,16 +47,24 @@ void setup() {
   // Procura as redes disponíveis
   int n = WiFi.scanNetworks();
   for (int i = 0; i < n; ++i) {
-    if (WiFi.SSID(i) == ssidHOME ) {        // se uma das redes salvar estiver listada 
-      WiFi.begin(ssidHOME, passwordHOME);   // tenta conectar 
+    if (WiFi.SSID(i) == ssidHOME ) {        // se uma das redes salvar estiver listada
+      Serial.print("Tentando conectar a ");
+      Serial.print(ssidHOME);
+      Serial.print(", com a senha");
+      Serial.print(passwordHOME);
+      WiFi.begin(ssidHOME, passwordHOME);   // tenta conectar
       break;
     }
-    if (WiFi.SSID(i) == ssidIFSLAB) {         
-      WiFi.begin(ssidIFSLAB, passwordIFSLAB); 
+    if (WiFi.SSID(i) == ssidIFSLAB) {
+      Serial.print("Tentando conectar a ");
+      Serial.print(ssidIFSLAB);
+      Serial.print(", com a senha");
+      Serial.print(passwordIFSLAB);
+      WiFi.begin(ssidIFSLAB, passwordIFSLAB);
       break;
     }
   }
-  
+
   while ( WiFi.status() != WL_CONNECTED ) {
     delay(100);
     Serial.print(".");
@@ -71,7 +76,7 @@ void setup() {
   Serial.println(WiFi.localIP());
   Serial.println("Acesse este site no seu navegador para comunicar-se com a ESP32.\n");
   server.begin();
-  
+
   // Inicia MFRC522
   mfrc522.PCD_Init();
 }
@@ -81,21 +86,21 @@ void loop() {
   WiFiClient client = server.available();
   if (client) {
     Serial.println("Novo cliente conectado");
-    
+
     // Variável para guardar o UID do cartão RFID
     String uid = "";
-    
+
     // String para guardar dados recebido do cliente
     String linhaAtual = "";
-    
+
     // Ações realizadas enquanto o cliente está conectado
     while (client.connected()) {
-        if (client.available()) { // Se houver dados do clientes
-          char c = client.read(); // Lê esses dados
-          Serial.write(c);        // Mostra os dados no Serial
-          header += c;            // Salva os dados no header
+      if (client.available()) { // Se houver dados do clientes
+        char c = client.read(); // Lê esses dados
+        Serial.write(c);        // Mostra os dados no Serial
+        header += c;            // Salva os dados no header
 
-          if (c == '\n') {        // se o dado for uma quebra de linha...
+        if (c == '\n') {        // se o dado for uma quebra de linha...
 
           // Se a linha atual estiver em branco, temos duas quebras de linha
           // Isso significa o fim da requisição HTTP do cliente.
@@ -137,150 +142,149 @@ void loop() {
 
 String lerCartao() {
 
-    String codigo = "";
-    bool theresACard = false;
-    
-    // Aguarda a aproximação do(s) cartão(ões)       
-    for (int i = 0; i < 50; i++) { // Percorre um loop de 50 voltas
-      if (mfrc522.PICC_IsNewCardPresent()) {
-        theresACard = true;
+  String codigo = "";
+  bool theresACard = false;
+
+  // Aguarda a aproximação do(s) cartão(ões)
+  for (int i = 0; i < 50; i++) { // Percorre um loop de 50 voltas
+    if (mfrc522.PICC_IsNewCardPresent()) {
+      theresACard = true;
+      break;
+    }
+    digitalWrite(greenLed, LOW);
+    delay(200); // a cada volta, antes de tentar ler um novo cartão, espera 0.2 segundos
+    digitalWrite(greenLed, HIGH);
+  } // 50 * 0.2 == 10 segundos de tentativa de leitura
+
+  // Se um houver um cartão...
+  if (theresACard) {
+
+    // ...seleciona um dos cartões (se houver mais de um)
+    for (int i = 0; i < 25; i++) {  // loop de 25 voltas
+      if (mfrc522.PICC_ReadCardSerial()) {
         break;
       }
-      digitalWrite(greenLed, LOW);
-      delay(200); // a cada volta, antes de tentar ler um novo cartão, espera 0.2 segundos
       digitalWrite(greenLed, HIGH);
-    } // 50 * 0.2 == 10 segundos de tentativa de leitura
-    
-    // Se um houver um cartão...
-    if (theresACard) { 
-      
-      // ...seleciona um dos cartões (se houver mais de um)
-      for (int i = 0; i < 25; i++) {  // loop de 25 voltas
-        if (mfrc522.PICC_ReadCardSerial()) {
-          break;
-        }
-        digitalWrite(greenLed, HIGH);
-        delay(200); 
-        digitalWrite(greenLed, HIGH);
-      } // 25 * 0.2 == 5 segundos de tentativa de ler um cartão dentre os detectados
-    
-    
-      // ...armazena o UID
-      for (byte i = 0; i < mfrc522.uid.size; i++)
-      {
-        codigo.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? "0" : ""));
-        codigo.concat(String(mfrc522.uid.uidByte[i], HEX));
-      }
-      
-      codigo.toUpperCase();
-  
-      Serial.println("Cartão lido: " + codigo);
+      delay(200);
+      digitalWrite(greenLed, HIGH);
+    } // 25 * 0.2 == 5 segundos de tentativa de ler um cartão dentre os detectados
+
+
+    // ...armazena o UID
+    for (byte i = 0; i < mfrc522.uid.size; i++)
+    {
+      codigo.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? "0" : ""));
+      codigo.concat(String(mfrc522.uid.uidByte[i], HEX));
     }
-    
-    // Pausa a leitura
-    mfrc522.PICC_HaltA();
 
-    // Liga o LED verde para indicar a pausa na leitrua
-    digitalWrite(greenLed, HIGH);
+    codigo.toUpperCase();
 
-    
-    return codigo;
+    Serial.println("Cartão lido: " + codigo);
+  }
+
+  // Pausa a leitura
+  mfrc522.PICC_HaltA();
+
+  // Liga o LED verde para indicar a pausa na leitrua
+  digitalWrite(greenLed, HIGH);
+
+
+  return codigo;
 }
 
 void abrirPaginaLeitura(WiFiClient client) {
 
-    client.println("<!DOCTYPE html><html lang=\"pt-br\">");
-    client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-    client.println("<meta charset=\"utf-8\">");
-    
-    // CSS para estilizar a página
-    client.println("<style>html {font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
-    client.println(".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;");
-    client.println("text-decoration: none; font-size: 16pt; margin: 2px; border-radius: 6px;}");
-    client.println(".container {height: 100%; padding: 15px; margin: 10px 15px; ");
-    client.println(" box-shadow: 3px 3px 10px rgba(0,0,0,0.25); border: 0.5px solid black;}");
-    client.println(".uid p { padding: 8px; border: 2px solid black; width: 100%; max-width: 200px;} </style></head>");
-    
-    // Página WEB
-    client.println("<body>");
-    client.println("<div id=\"paginaLeitura\" class=\"container\">");
-    client.println("<p class=\"button\"><b>Lendo...</b></p>");
-    client.println("</div>");
-    client.println("</body>");
+  client.println("<!DOCTYPE html><html lang=\"pt-br\">");
+  client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+  client.println("<meta charset=\"utf-8\">");
 
-    client.println("</html>");
+  // CSS para estilizar a página
+  client.println("<style>html {font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
+  client.println(".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;");
+  client.println("text-decoration: none; font-size: 16pt; margin: 2px; border-radius: 6px;}");
+  client.println(".container {height: 100%; padding: 15px; margin: 10px 15px; ");
+  client.println(" box-shadow: 3px 3px 10px rgba(0,0,0,0.25); border: 0.5px solid black;}");
+  client.println(".uid p { padding: 8px; border: 2px solid black; width: 100%; max-width: 200px;} </style></head>");
 
-    // The HTTP response ends with another blank line
-    client.println();
+  // Página WEB
+  client.println("<body>");
+  client.println("<div id=\"paginaLeitura\" class=\"container\">");
+  client.println("<p class=\"button\"><b>Lendo...</b></p>");
+  client.println("</div>");
+  client.println("</body>");
+
+  client.println("</html>");
+
+  // The HTTP response ends with another blank line
+  client.println();
 
 }
 
 // Monta a página WEB para exibir o UID do cartão lido
 void atualizarPaginaWEB(WiFiClient client, String uid) {
 
-    String mensagemUID = "";
-    Serial.println(uid + " - " + mensagemUID);
-    if (uid == "") {
-      mensagemUID = "Nenhum cartão lido";
-    } else {
-      mensagemUID = "Código detectado. Pronto para avançar.";
-    }
+  String mensagemUID = "";
+  Serial.println(uid + " - " + mensagemUID);
+  if (uid == "") {
+    mensagemUID = "Nenhum cartão lido";
+  } else {
+    mensagemUID = "Código detectado. Pronto para avançar.";
+  }
 
-    client.println("<!DOCTYPE html><html lang=\"pt-br\">");
-    client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-    client.println("<meta charset=\"utf-8\">");
-    
-    // CSS para estilizar a página
-    client.println("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
-    client.println("#paginaLeitura {display: none;}"); // esconde a paǵina de leitura
-    client.println(".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;");
-    client.println("text-decoration: none; font-size: 16pt; margin: 2px; cursor: pointer; border-radius: 6px;}");
-    client.println(".lead {font-size: 15pt;}");
-    client.println(".uid { display: flex; justify-content: center;}");
-    client.println(".container {height: 100%; padding: 15px; margin: 10px 15px; ");
-    client.println(" box-shadow: 3px 3px 10px rgba(0,0,0,0.25); border: 0.5px solid black;}");
-    client.println(".uid p { padding: 8px; border: 2px solid black; width: 100%; max-width: 200px;} </style></head>");
-    
-    // Página WEB
-    client.println("<body>");
-    client.println("<div class=\"container\">");
-    client.println("<h2><b>Pronto para ler um cartão/etiqueta RFID.</b></h2>");
-    client.println("<p class=\"lead\">Clique no botão abaixo e aproxime o cartão do leitor.</p>");
-    client.println("<p><a href=\"/ler\"><button class=\"button\"><b>Ler Cartão</b></button></a></p>");
-    client.println("<br>");
-    client.println("<br><div class=\"uid\"><p class=\"lead\">" + mensagemUID + "</p></div>");
-    client.println("</div>");
-    client.println("</body>");
-    
-    // Script de comunicação com o site Bikeifs.com
-    client.println("<script type=\"text/javascript\">");
-    client.println("const dominios = [\"http://bikeifs.com\"]"); // Lista de domínios liberados
-   
-    // Escuta por eventos de postMessage
-    client.println("window.addEventListener(\"message\", function(e) {"); /* FUNÇÃO EVENT LISTENER */
-    
-    client.println("if (!dominios.includes(e.origin)) return;"); // Se o site conectado não estiver liberado, retorna.
-    
-    client.println("const {acao, chave} = e.data"); // recupera a ação e a chave requisitada dos dados do evento
-    
-    // se a requisicão HTTP for do tipo GET e o valor requisitado é o UID do cartão
-    client.println("if (acao == \'get\' && chave == \'uid\') {"); /* IF */ 
-    client.println("var valor = \"" + uid + "\""); // salva o UID lido na variável que será enviada como resposta 
-    client.println("e.source.postMessage({"); /* POST MESSAGE */
-    client.println("acao: \'returnData\', chave, valor"); // Dados enviados em formato JSON 
-    client.println("}, \'*\')"); /* FIM POST MESSAGE */
-    client.println("}"); /* FIM IF */
-    client.println("});"); /* FIM FUNÇÃO EVENT LISTENER */
+  client.println("<!DOCTYPE html><html lang=\"pt-br\">");
+  client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+  client.println("<meta charset=\"utf-8\">");
 
-    
-    client.println("</script>");
-    
-    // The HTTP response ends with another blank line
-    client.println();
+  // CSS para estilizar a página
+  client.println("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
+  client.println("#paginaLeitura {display: none;}"); // esconde a paǵina de leitura
+  client.println(".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;");
+  client.println("text-decoration: none; font-size: 16pt; margin: 2px; cursor: pointer; border-radius: 6px;}");
+  client.println(".lead {font-size: 15pt;}");
+  client.println(".uid { display: flex; justify-content: center;}");
+  client.println(".container {height: 100%; padding: 15px; margin: 10px 15px; ");
+  client.println(" box-shadow: 3px 3px 10px rgba(0,0,0,0.25); border: 0.5px solid black;}");
+  client.println(".uid p { padding: 8px; border: 2px solid black; width: 100%; max-width: 200px;} </style></head>");
+
+  // Página WEB
+  client.println("<body>");
+  client.println("<div class=\"container\">");
+  client.println("<h2><b>Pronto para ler um cartão/etiqueta RFID.</b></h2>");
+  client.println("<p class=\"lead\">Clique no botão abaixo e aproxime o cartão do leitor.</p>");
+  client.println("<p><a href=\"/ler\"><button class=\"button\"><b>Ler Cartão</b></button></a></p>");
+  client.println("<br>");
+  client.println("<br><div class=\"uid\"><p class=\"lead\">" + mensagemUID + "</p></div>");
+  client.println("</div>");
+  client.println("</body>");
+
+  // Script de comunicação com o site Bikeifs.com
+  client.println("<script type=\"text/javascript\">");
+  client.println("const dominios = [\"http://bikeifs.com\", \"http://localhost\"]"); // Lista de domínios liberados
+
+  // Escuta por eventos de postMessage
+  client.println("window.addEventListener(\"message\", function(e) {"); /* FUNÇÃO EVENT LISTENER */
+  client.println("if (!dominios.includes(e.origin)) return;"); // Se o site conectado não estiver liberado, retorna.
+
+  client.println("const {acao, chave} = e.data"); // recupera a ação e a chave requisitada dos dados do evento
+
+  // se a requisicão HTTP for do tipo GET e o valor requisitado é o UID do cartão
+  client.println("if (acao == \'get\' && chave == \'uid\') {"); /* IF */
+  client.println("var valor = \"" + uid + "\""); // salva o UID lido na variável que será enviada como resposta
+  client.println("e.source.postMessage({"); /* POST MESSAGE */
+  client.println("acao: \'returnData\', chave, valor"); // Dados enviados em formato JSON
+  client.println("}, \'*\')"); /* FIM POST MESSAGE */
+  client.println("}"); /* FIM IF */
+  client.println("});"); /* FIM FUNÇÃO EVENT LISTENER */
 
 
-    // Limpa a variável UID
-    uid = "";
-    
-    
+  client.println("</script>");
+
+  // The HTTP response ends with another blank line
+  client.println();
+
+
+  // Limpa a variável UID
+  uid = "";
+
+
 }
