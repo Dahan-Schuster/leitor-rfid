@@ -5,10 +5,10 @@
 #include <WiFiClient.h> // biblioteca para envio de requests HTTP
 
 /* Configurações do Wi-FI */
-const char ssidHOME[]     = "VIVO-EAE0";
-const char passwordHOME[] = "8403000199";
-const char ssidIFSLAB[] = "IFSLAB";
-const char passwordIFSLAB[] = "LABifs!@#";
+char ssidHOME[]     = "VIVO-EAE0";
+char passwordHOME[] = "8403000199";
+char ssidIFSLAB[] = "MotoG";
+char passwordIFSLAB[] = "9495moto";
 
 // Define a porta do servidor para 80
 WiFiServer server(80);

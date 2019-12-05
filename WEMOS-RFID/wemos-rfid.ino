@@ -8,10 +8,10 @@
 /* Configurações do Wi-FI */
 const char ssidHOME[]     = "VIVO-EAE0";
 const char passwordHOME[] = "8403000199";
-//const char ssidIFSLAB[] = "Xuxu";
-//const char passwordIFSLAB[] = "honeyandsugar";
-const char ssidIFSLAB[] = "IFSLAB";
-const char passwordIFSLAB[] = "LABifs!@#";
+const char ssidIFSLAB[] = "VIVO-9EB9";
+const char passwordIFSLAB[] = "2F8A139EB9";
+//const char ssidIFSLAB[] = "IFSLAB";
+//const char passwordIFSLAB[] = "LABifs!@#";
 
 // Define a porta do servidor para 80
 WiFiServer server(80);
@@ -32,8 +32,8 @@ MFRC522::StatusCode status;
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 
 /* LEDs */
-#define redLed    D1
-#define greenLed  D2
+#define redLed    D2
+#define greenLed  D1
 
 void setup()
 {
@@ -94,6 +94,18 @@ void setup()
   // Inicia MFRC522
   mfrc522.PCD_Init();
 
+  // PARA TESTES, DESCOMENTE AS LINHAS ABAIXO
+  
+  // Iniciar a leitura de cartões RFID para testar se o leitor está funcionando
+  /*
+  String u = lerCartao();
+  String m = "";
+  if (u == "") m = "Nenhum código lido";
+  else m = "Código lido: ";
+  Serial.println("------ Teste de leitura do cartão ------");
+  Serial.println("*** " + m + u + " ***");
+  Serial.println("--------- Fim teste de leitura ---------");  
+  */
 }
 
 void loop() {
@@ -200,7 +212,7 @@ String lerCartao() {
   // Pausa a leitura
   mfrc522.PICC_HaltA();
 
-  // Liga o LED verde para indicar a pausa na leitrua
+  // Liga o LED verde para indicar a pausa na leitura
   digitalWrite(greenLed, HIGH);
 
 
@@ -239,7 +251,7 @@ void abrirPaginaLeitura(WiFiClient client) {
 void atualizarPaginaWEB(WiFiClient client, String uid) {
 
   String mensagemUID = "";
-  Serial.println(uid + " - " + mensagemUID);
+  Serial.println(uid);
   if (uid == "") {
     mensagemUID = "Nenhum cartão lido";
   } else {
